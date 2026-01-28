@@ -1,9 +1,8 @@
 package com.orangehrm.tests;
 
 import com.orangehrm.base.BaseTest;
-import org.openqa.selenium.By;
-import org.openqa.selenium.WebElement;
-import org.openqa.selenium.support.ui.ExpectedConditions;
+import com.orangehrm.pages.LoginPage;
+import com.orangehrm.pages.DashboardPage;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -17,6 +16,8 @@ import org.testng.annotations.Test;
  * 3. Invalid username
  * 4. Empty credentials
  * 5. Logout functionality
+ * 6. Session Security: Access After Logout
+ * 7. Password case sensitivity
  *
  * Real-World Impact:
  * - Login is the gateway to all HR operation
@@ -29,80 +30,31 @@ import org.testng.annotations.Test;
 
 public class LoginTests extends BaseTest {
 
+    private LoginPage loginPage;
+    private DashboardPage dashboardPage;
+
     /**
      * Test Case 1: Successful login with valid credentials
-     * <p>
      * Business Context:
      * - Most common scenario (99% of daily logins)
      * - Broken login = complete system downtime = revenue loss
      * - HR can't process payroll = employee complaints
-     * <p>
-     * Steps
-     * 1. Enter valid username
-     * 2. Enter valid password
-     * 3. Click login button
-     * 4. Verify dashboard loads
-     * 5. Verify user profile name displayed
-     * 6. Session Security: Access After Logout
-     * 7. Password case sensitivity
      */
-    @Test(priority = 1, description = "Valid Login Test - happy Path")
+    @Test(priority = 1, description = "Valid Login - Happy Flow")
     public void testValidLogin() {
         System.out.println("\n🧪 TEST 1: Valid Login");
-        System.out.println("    Scenario: HR Manager logging in for morning shift");
 
-        try {
-            // Step 1: Wait for login page to load
-            WebElement usernameField = wait.until(
-                    ExpectedConditions.presenceOfElementLocated(
-                            By.name("username")
-                    )
-            );
-            System.out.println("   ➤ Login page loaded successfully");
+        // Initialize page object
+        loginPage = new LoginPage(driver);
 
+        // Perform login using page object methods
+        dashboardPage = loginPage.login(USERNAME,PASSWORD);
 
-            // Step 2: Enter username
-            usernameField.clear();
-            usernameField.sendKeys(USERNAME);
-            System.out.println("   ➤ Entered username: " + USERNAME);
+        // Verify Dashboard loaded
+        Assert.assertTrue(dashboardPage.isDashboardDisplayed(),
+                "Dashboard did not load after login!");
 
-            // Step 3: Enter password
-            WebElement passwordField = driver.findElement(By.name("password"));
-            passwordField.clear();
-            passwordField.sendKeys(PASSWORD);
-            System.out.println("   ➤ Entered password");
-
-            // Step 4: Click login button
-            WebElement loginButton = driver.findElement(
-                    By.cssSelector("button[type='submit']")
-            );
-            loginButton.click();
-            System.out.println("   ➤ Clicked login button");
-
-            // Step 5: Verify dashboard loads (URL changes)
-            wait.until(ExpectedConditions.urlContains("dashboard"));
-            String currentUrl = driver.getCurrentUrl();
-            Assert.assertTrue(currentUrl.contains("dashboard"),
-                    "Login failed! Dashboard did not load. Current URL: " + currentUrl);
-            System.out.println("   ✅ Dashboard loaded: " + currentUrl);
-
-            // Step 6: Verify dashboard Header
-            WebElement dashboardHeader = wait.until(
-                    ExpectedConditions.presenceOfElementLocated(
-                            By.cssSelector("h6.oxd-text--h6")
-                    )
-            );
-            Assert.assertTrue(dashboardHeader.isDisplayed(),
-                    "Dashboard header not displayed!");
-            System.out.println("   ✅ Dashboard header verified");
-
-            System.out.println("   ✅ TEST PASSED: Login successful");
-            System.out.println("   💡 Real impact: User can now access HR functions");
-
-        } catch (Exception e) {
-            System.out.println("   ❌ TEST FAILED: " + e.getMessage());
-            throw e;
-        }
+        System.out.println("   ✅ TEST PASSED: Login successful");
     }
 
     /**
@@ -115,48 +67,27 @@ public class LoginTests extends BaseTest {
      *
      * Expected: Error message "Invalid credentials" displayed
      */
-    @Test(priority = 2, description = "Invalid Password Test")
+
+    @Test(priority = 2, description = "Invalid Password")
     public void testInvalidPassword() {
         System.out.println("\n🧪 TEST 2: Invalid Password");
-        System.out.println("    Scenario: User enters wrong password");
 
-        try {
-            // Enter valid username
-            WebElement usernameField = wait.until(
-                    ExpectedConditions.presenceOfElementLocated(By.name("username"))
-            );
-            usernameField.sendKeys(USERNAME);
-            System.out.println("   ➤ Entered username: " + USERNAME);
+        loginPage = new LoginPage(driver);
 
-            // Enter Wrong password
-            WebElement passwordField = driver.findElement(By.name("password"));
-            passwordField.sendKeys("WrongPassword123");
-            System.out.println("   ➤ Entered wrong password");
+        // Step-by-step login (for scenarios needing verification at each step)
+        loginPage.enterUsername(USERNAME);
+        loginPage.enterPassword("Wrongpassword1234");
+        loginPage.clickLoginButton();
 
-            // Click login
-            driver.findElement(By.cssSelector("button[type='submit']")).click();
-            System.out.println("   ➤ Clicked login button");
+        // Verify error message using page object method
+        Assert.assertTrue(loginPage.isErrorMessageDisplayed(),
+                "Error message not displayed!");
 
-            // Verify error message appears
-            WebElement errorMessage = wait.until(
-                    ExpectedConditions.presenceOfElementLocated(
-                            By.cssSelector("p.oxd-alert-content-text")
-                    )
-            );
+        String errorText = loginPage.getErrorMessage();
+        Assert.assertTrue(errorText.contains("Invalid credentials"),
+                "Unexpected error message: " + errorText);
 
-            String errorText = errorMessage.getText();
-            Assert.assertTrue(errorText.contains("Invalid credentials"),
-                    "Expected error message not displayed! Got: " + errorText);
-
-            System.out.println("   ✅ Error message displayed: " + errorText);
-            System.out.println("   ✅ TEST PASSED: Invalid login prevented");
-            System.out.println("   💡 Security working: Unauthorized access blocked");
-
-
-        } catch (Exception e) {
-            System.out.println("   ❌ TEST FAILED: " + e.getMessage());
-            throw e;
-        }
+        System.out.println("   ✅ TEST PASSED: Invalid login prevented");
     }
 
     /**
@@ -172,37 +103,18 @@ public class LoginTests extends BaseTest {
     @Test(priority = 3, description = "Empty Credentials Test")
     public void testEmptyCredentials() {
         System.out.println("\n🧪 TEST 3: Empty Credentials");
-        System.out.println("    Scenario: User clicks login without entering data");
 
-        try {
-            // Click login button directly (no credentials entered)
-            WebElement loginButton = wait.until(
-                    ExpectedConditions.elementToBeClickable(
-                            By.cssSelector("button[type='submit']")
-                    )
-            );
-            loginButton.click();
-            System.out.println("   ➤ Clicked login with empty fields");
+        loginPage = new LoginPage(driver);
 
-            // Verify "Required" message appears
-            WebElement requiredMessage = wait.until(
-                    ExpectedConditions.presenceOfElementLocated(
-                            By.cssSelector("span.oxd-input-field-error-message")
-                    )
-            );
+        // Click login without entering credentials
+        loginPage.clickLoginButton();
 
-            String messageText = requiredMessage.getText();
-            Assert.assertTrue(messageText.contains("Required"),
-                    "Required validation message not displayed! Got " + messageText);
+        // Verify validation message
+        String validationMessage = loginPage.getRequiredFieldError();
+        Assert.assertTrue(validationMessage.contains("Required"),
+                "Required Validation not displayed!");
 
-            System.out.println("   ✅ Validation message: " + messageText);
-            System.out.println("   ✅ TEST PASSED: Empty field validation working");
-            System.out.println("   💡 Client-side validation prevents wasted server calls");
-
-        } catch (Exception e) {
-            System.out.println("   ❌ TEST FAILED: " + e.getMessage());
-            throw e;
-        }
+        System.out.println("   ✅ TEST PASSED: Empty field validation working");
     }
 
     /**
@@ -217,43 +129,18 @@ public class LoginTests extends BaseTest {
     @Test(priority = 4, description = "Invalid Username Test")
     public void testInvalidUsername() {
         System.out.println("\n🧪 TEST 4: Invalid Username");
-        System.out.println("   Scenario: User enters non-existent username");
 
-        try {
-            WebElement usernameField = wait.until(
-                    ExpectedConditions.presenceOfElementLocated(
-                            By.name("username")
-                    )
-            );
-            usernameField.sendKeys("InvalidUser123");
-            System.out.println("   ➤ Entered invalid username");
+        loginPage = new LoginPage(driver);
 
-            // Enter valid password
-            driver.findElement(By.name("password")).sendKeys(PASSWORD);
-            System.out.println("   ➤ Entered password");
+        loginPage.enterUsername("Adim123");
+        loginPage.enterPassword(PASSWORD);
+        loginPage.clickLoginButton();
 
-            // Click login
-            driver.findElement(By.cssSelector("button[type='submit']")).click();
+        String errorText = loginPage.getErrorMessage();
+        Assert.assertTrue(errorText.contains("Invalid credentials"),
+                "Unexpected error: " + errorText);
 
-            // Verify generic error (security best practice)
-            WebElement errorMessage = wait.until(
-                    ExpectedConditions.presenceOfElementLocated(
-                            By.cssSelector("p.oxd-alert-content-text")
-                    )
-            );
-
-            String errorText = errorMessage.getText();
-            Assert.assertTrue(errorText.contains("Invalid credentials"),
-                    "Unexpected error message! Got: " + errorText);
-
-            System.out.println("   ✅ Generic error displayed (good security)");
-            System.out.println("   ✅ TEST PASSED: No username enumeration vulnerability");
-            System.out.println("   💡 Attackers can't determine if username exists");
-
-        } catch (Exception e) {
-            System.out.println("   ❌ TEST FAILED: " + e.getMessage());
-            throw e;
-        }
+        System.out.println("   ✅ TEST PASSED: Generic error prevents username enumeration");
     }
 
     /**
@@ -263,65 +150,25 @@ public class LoginTests extends BaseTest {
      * - Session Management
      * - Compliance requirement (shared computers)
      * - Security: logout must work reliably
-     *
-     * 1. Login successfully
-     * 2. Click user profile dropdown
-     * 3. Click logout
-     * 4. Verify redirected to login page
-     * 5. Verify cannot access dashboard after logout
-     *
      */
     @Test(priority = 5, description = "Logout Functionality Test")
-    public void testLogOut() {
-        System.out.println("\n🧪 TEST 5: Logout Functionality");
-        System.out.println("   Scenario: User finishing shift, needs to logout securely");
+    public void testLogout() {
+        System.out.println("\n🧪 TEST 5: Logout");
 
-        try{
-            performLogin();
-            System.out.println("   ➤ Logged-in successfully");
+        loginPage = new LoginPage(driver);
 
-            wait.until(ExpectedConditions.urlContains("dashboard"));
-            System.out.println("   ➤ Dashboard loaded");
+        // Login and get dashboard page
+        dashboardPage = loginPage.login(USERNAME, PASSWORD);
+        Assert.assertTrue(dashboardPage.isDashboardDisplayed(),
+                "Dashboard not loaded!");
 
-            WebElement dropDown = wait.until(
-                    ExpectedConditions.elementToBeClickable(
-                        By.cssSelector("span.oxd-userdropdown-tab")
-            ));
-            dropDown.click();
-            System.out.println("   ➤ Clicked user dropdown");
+        // Verify back on login page
+        loginPage = dashboardPage.logout();
 
-            WebElement logoutLink = wait.until(
-                    ExpectedConditions.elementToBeClickable(
-                            By.linkText("Logout")
-                    )
-            );
-            logoutLink.click();
-            System.out.println("   ➤ Clicked logout");
+        Assert.assertTrue(loginPage.isLoginPageDisplayed(),
+                "Not redirected to login page after logout!");
 
-            wait.until(ExpectedConditions.urlContains("auth/login"));
-            String currentUrl = driver.getCurrentUrl();
-            Assert.assertTrue(currentUrl.contains("auth/login"),
-                    "Logout failed! Not redirected to login page. URL: " + currentUrl);
-
-            WebElement loginForm = wait.until(
-                    ExpectedConditions.presenceOfElementLocated(
-                          By.name("username")
-                    )
-            );
-
-            Assert.assertTrue(loginForm.isDisplayed(),
-                    "Login form not displayed after logout!");
-
-            System.out.println("   ✅ Redirected to login page: " + currentUrl);
-            System.out.println("   ✅ TEST PASSED: Logout successful");
-            System.out.println("   💡 Session terminated - secure logout confirmed");
-            System.out.println("   💡 Compliance: Shared computer security maintained");
-
-
-        } catch (Exception e) {
-            System.out.println("   ❌ TEST FAILED: " + e.getMessage());
-            throw e;
-        }
+        System.out.println("   ✅ TEST PASSED: Logout successful");
     }
 
     /**
@@ -334,98 +181,55 @@ public class LoginTests extends BaseTest {
      *
      * Expected: Attempting to access dashboard redirects to login
      */
-    @Test(priority = 6, description = "Session Secuirty: Access After Logout")
-    public void testAccessDashboardAfterLogout () {
+    @Test(priority = 6, description = "Session Security: Access After Logout")
+    public void testAccessDashboardAfterLogout() {
         System.out.println("\n🧪 TEST 6: Access Dashboard After Logout");
-        System.out.println("   Scenario: Security test - verify session invalidation");
 
-        try{
-            performLogin();
-            wait.until(ExpectedConditions.urlContains("dashboard"));
-            String dashboardUrl = driver.getCurrentUrl();
-            System.out.println("   ➤ Captured dashboard URL: " + dashboardUrl);
+        loginPage = new LoginPage(driver);
 
-            driver.findElement(By.cssSelector("span.oxd-userdropdown-tab")).click();
-            wait.until(ExpectedConditions.elementToBeClickable(
-                    By.linkText("Logout")
-            )).click();
-            wait.until(ExpectedConditions.urlContains("auth/login"));
-            System.out.println("   ➤ Logged out successfully");
+        // Login
+        dashboardPage = loginPage.login(USERNAME, PASSWORD);
+        String dashboardUrl = dashboardPage.getPageUrl();
+        System.out.println("   ➤ Dashboard URL: " + dashboardUrl);
 
-            driver.get(dashboardUrl);
-            System.out.println("   ➤ Attempted to access dashboard after logout");
+        // Logout
+        loginPage = dashboardPage.logout();
 
-            wait.until(ExpectedConditions.urlContains("auth/login"));
-            String finalUrl = driver.getCurrentUrl();
+        // Try accessing dashboard directly
+        driver.get(dashboardUrl);
 
-            Assert.assertTrue(finalUrl.contains("auth/login"),
-                    "Security vulnerability! Dashboard accessible after logout");
+        // Verify redirected to login (session invalid)
+        Assert.assertTrue(loginPage.isLoginPageDisplayed(),
+                "Security vulnerability! Dashboard accessible after logout");
 
-            System.out.println("   ✅ Redirected to login: " + finalUrl);
-            System.out.println("   ✅ TEST PASSED: Session properly invalidated");
-            System.out.println("   💡 Security confirmed: No unauthorized access post-logout");
-            System.out.println("   💡 OWASP compliance: Broken Authentication prevented");
-
-
-        } catch (Exception e) {
-            System.out.println("   ❌ TEST FAILED: " + e.getMessage());
-            throw e;
-        }
+        System.out.println("   ✅ TEST PASSED: Session properly invalidated");
     }
 
     /**
-     * Test Case 7: Validates passwords ARE case-sensitive
+     * Test Case 7: Password case sensitivity
      *
      * Expected: Validation error
      */
-    @Test(priority = 7, description = "Verify Case-Sensitive for Password field")
-    public void testCaseSensitive(){
-        System.out.println("\n🧪 TEST 7: Verify Case-Sensitive for Password Field");
-        System.out.println("   Scenario: Password Field Case-Sensitive ");
+    @Test(priority = 7, description = "Password case sensitivity")
+    public void testCaseSensitive() {
+        System.out.println("\n🧪 TEST 7: Password case sensitivity");
 
-        try{
-            WebElement usernameField = wait.until(
-                    ExpectedConditions.presenceOfElementLocated(By.name("username"))
-            );
-            usernameField.clear();
-            usernameField.sendKeys(USERNAME);
+        loginPage = new LoginPage(driver);
 
-            WebElement passwordField = driver.findElement(By.name("password"));
-            passwordField.clear();
-            passwordField.sendKeys("ADMIN123");
+        // Login with uppercase password (should fail)
+        loginPage.enterUsername(USERNAME);
+        loginPage.enterPassword("ADMIN123");
+        loginPage.clickLoginButton();
 
-            driver.findElement(By.cssSelector("button[type='submit']")).click();
+        // Verify error
+        Assert.assertTrue(loginPage.isErrorMessageDisplayed(),
+                "Error not displayed for wrong case password!");
 
-            WebElement errorMessage = wait.until(ExpectedConditions.presenceOfElementLocated(
-                    By.cssSelector("p.oxd-alert-content-text")
-            ));
-            String errorText = errorMessage.getText();
-            Assert.assertTrue(errorText.contains("Invalid credentials"),
-                    "Expected error message not displayed! Got: " + errorText);
+        String errorText = loginPage.getErrorMessage();
+        Assert.assertTrue(errorText.contains("Invalid credentials"),
+                "Unexpected error: " + errorText);
 
-        } catch (Exception e) {
-            System.out.println("   ❌ TEST FAILED: " + e.getMessage());
-            throw e;
-        }
-    }
+        System.out.println("   ✅ TEST PASSED: Password is case-sensitive");
 
-    /**
-     * Helper method: Perform login (reusable across tests)
-     * Encapsulates login logic to avoid code duplication
-     */
-    private void performLogin() {
-        WebElement usernameField = wait.until(
-                ExpectedConditions.presenceOfElementLocated(By.name("username"))
-        );
-        usernameField.clear();
-        usernameField.sendKeys(USERNAME);
-
-        WebElement passwordField = driver.findElement(By.name("password"));
-        passwordField.clear();
-        passwordField.sendKeys(PASSWORD);
-
-        driver.findElement(By.cssSelector("button[type='submit']")).click();
     }
 }
-
-
