@@ -12,6 +12,31 @@ This framework automates end-to-end testing of the OrangeHRM Human Resource Mana
 - Recruitment Module
 - API Testing
 
+## 🏗️ Framework Architecture
+
+### Page Object Model (POM)
+This framework follows the Page Object Model design pattern for better maintainability and scalability.
+
+### Structure:
+```text
+src/
+ ├── main/java/com.orangehrm
+ │    ├── base/
+ │    │    └── BasePage.java       # Parent class for all page objects
+ │    └── pages/
+ │         ├── LoginPage.java     # Login page actions & elements
+ │         └── DashboardPage.java # Dashboard page actions & elements
+ └── test/java/com.orangehrm.tests
+      ├── BaseTest.java           # Parent class for all test classes
+      ├── LoginTests.java         # Login functionality tests
+      └── DashboardTests.java     # Dashboard functionality tests
+      
+```
+### Design Patterns Used:
+1. **Page Object Model** - Each page is represented as a class
+2. **Inheritance** - BasePage provides common functionality
+3. **Encapsulation** - Page elements hidden from tests
+4. **Method Chaining** - Fluent navigation between pages
 ## 🛠️ Technologies Used
 
 - **Language:** Java 11
@@ -21,19 +46,21 @@ This framework automates end-to-end testing of the OrangeHRM Human Resource Mana
 - **Reporting:** Extent Reports
 - **Design Pattern:** Page Object Model
 
-## 🚀 Current Test Coverage
+## 📊 Current Progress
 
-### Login Module (Week 1)
-- ✅ Valid login test
-- ✅ Invalid password test
-- ✅ Empty credentials validation
-- ✅ Invalid username test
-- ✅ Logout functionality
-- ✅ Session security post-logout
-- ✅ Password case-sensitivity
+### Week 1 Completed ✅
+- [x] Project setup with Maven
+- [x] Selenium WebDriver configuration
+- [x] TestNG framework integration
+- [x] Login module automation (7 test scenarios)
+- [x] Page Object Model implementation
+- [x] BasePage utility class
+- [x] Dashboard navigation tests
 
-**Total Tests:** 7  
-**Pass Rate:** 100%
+**Total Tests:** 10+  
+**Pass Rate:** 100%  
+**Code Quality:** Production-ready with POM
+```
 
 ## 📦 Setup Instructions
 
@@ -67,7 +94,6 @@ mvn test
 - [ ] Week 6: Framework Enhancement (Reporting, Logging)
 - [ ] Week 7: CI/CD Integration
 - [ ] Week 8: Final Polish & Documentation
-
 
 ## 📬 Contact
 
